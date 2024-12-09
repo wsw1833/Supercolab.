@@ -43,10 +43,10 @@ export default function sidebar({ page }) {
   return (
     <SidebarProvider>
       <Sidebar>
-        <div className="flex flex-row justify-center items-center text-[28px] text-b1 font-inter font-bold py-4 bg-white">
+        <div className="flex flex-row justify-center items-center text-[28px] text-b1 font-inter font-bold py-4 pb-4 bg-white">
           SuperColab.
-          <span className="w-[3rem] h-[3rem] flex justify-center items-center">
-            <img src="/logo.jpg" alt="logo" />
+          <span className="w-[2.5rem] h-[2.5rem] flex justify-center items-center">
+            <img src="supercolab.svg" alt="logo" />
           </span>
         </div>
         <SidebarContent className="bg-white">

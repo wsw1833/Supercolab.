@@ -7,9 +7,9 @@ export default function header() {
       <div className="flex-1"></div>
       <div className="flex items-center justify-center text-center">
         <Link href={'/'}>
-          <span className="text-[28px] text-b1 font-inter font-bold flex items-center justify-center">
+          <span className="text-[28px] gap-3 text-b1 font-inter font-bold flex items-center justify-center">
             <img
-              src="/logo.jpg"
+              src="supercolab.svg"
               alt="logo"
               className="w-[3rem] h-[3rem] flex flex-row"
             />
