@@ -24,14 +24,16 @@ const appMetadata = {
   url: 'localhost',
 };
 
-const HedaraContext = createContext();
+const HederaContext = createContext();
 
-export function HedaraProvider({ children }) {
+export function HederaProvider({ children }) {
   const [pairingData, setPairingData] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState(
     HashConnectConnectionState.Disconnected
   );
   const [hashconnect, setHashconnect] = useState(null);
+
+  const accountId = pairingData ? pairingData.accountIds[0] : null;
 
   useEffect(() => {
     init();
@@ -67,6 +69,7 @@ export function HedaraProvider({ children }) {
 
   const connect = async () => {
     await hashconnect?.openPairingModal();
+    sessionStorage.setItem(`AddressId`, pairingData.accountIds[0]);
   };
 
   const createJar = async ({
@@ -100,7 +103,7 @@ export function HedaraProvider({ children }) {
           approvers,
           createdAt: Date.now(),
           expiresAt: Date.now() + 3 * 24 * 60 * 60 * 1000, // 3 days
-          status: 'PENDING',
+          status: 'Pending',
         })
       )
       .setMaxTransactionFee(new Hbar(2));
@@ -227,17 +230,18 @@ export function HedaraProvider({ children }) {
     generateAcceptanceLink,
     checkJarExpiration,
     refundDeposit,
+    accountId,
   };
 
   return (
-    <HedaraContext.Provider value={value}>{children}</HedaraContext.Provider>
+    <HederaContext.Provider value={value}>{children}</HederaContext.Provider>
   );
 }
 
-export function useHedara() {
-  const context = useContext(HedaraContext);
+export function useHedera() {
+  const context = useContext(HederaContext);
   if (context === undefined) {
-    throw new Error('useHedara must be used within a HedaraProvider');
+    throw new Error('useHedera must be used within a HederaProvider');
   }
   return context;
 }

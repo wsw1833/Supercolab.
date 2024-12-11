@@ -1,7 +1,6 @@
 import React from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import PopDetails from '../components/popDetails';
 import {
   Select,
   SelectTrigger,
@@ -120,7 +119,7 @@ const memberPage = () => {
         </div>
         <div className="col-start-1 col-span-9 ml-1">
           <Table className="mt-8">
-            <TableHeader className="rounded-[12px]">
+            <TableHeader className="rounded-[12px] bg-p2">
               <TableRow className="bg-p2 flex flex-row justify-center gap-[10rem] items-center text-[16px] text-center rounded-[12px] hover:bg-p2">
                 <TableHead className="text-b2 font-inter flex items-center">
                   NickNames

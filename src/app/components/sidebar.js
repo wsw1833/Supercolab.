@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link.js';
 import { dashboard, addUser, sign, logo, copy } from '../../../public/index.js';
 import {
@@ -14,6 +14,7 @@ import {
   SidebarProvider,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button.jsx';
+import { useHedera } from '@/contexts/HederaContext.js';
 
 const items = [
   {
@@ -34,19 +35,28 @@ const items = [
 ];
 
 export default function sidebar({ page }) {
+  const { accountId } = useHedera();
   const [isActive, setIsActive] = useState('Dashboard');
 
   const handleMenuClick = (menu) => {
     setIsActive(menu); // Update active menu on click
   };
 
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(accountId);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
+  };
+
   return (
     <SidebarProvider>
       <Sidebar>
-        <div className="flex flex-row justify-center items-center text-[28px] text-b1 font-inter font-bold py-4 bg-white">
+        <div className="flex flex-row justify-center items-center text-[28px] pb-4 text-b1 font-inter font-bold py-4 bg-white">
           SuperColab.
-          <span className="w-[3rem] h-[3rem] flex justify-center items-center">
-            <img src="/logo.jpg" alt="logo" />
+          <span className="w-[2.5rem] h-[2.5rem] flex justify-center items-center">
+            <img src="supercolab.svg" alt="logo" />
           </span>
         </div>
         <SidebarContent className="bg-white">
@@ -75,14 +85,17 @@ export default function sidebar({ page }) {
               </SidebarMenu>
               {/*wallet address here*/}
               <div className="flex flex-row items-center justify-center">
-                <Button className="w-fit h-[3rem] bg-p1 hover:bg-p3 flex flex-row justify-around ">
+                <Button
+                  onClick={copyToClipboard}
+                  className="w-fit h-[3rem] bg-p1 hover:bg-p3 flex flex-row justify-around "
+                >
                   <img
                     src="/hashpack.png"
                     alt="wallet"
                     className="w-[2rem] h-[2rem]"
                   />
-                  <span className="text-white font-inter font-medium text-[20px]">
-                    {'0.0.1234567'}
+                  <span className="w-[6.5rem] max-w-[7rem] text-white font-inter font-medium text-[16px]">
+                    {accountId ? accountId : ''}
                   </span>
                   <img
                     src="/copy.png"

@@ -35,7 +35,7 @@ export default function Dashboard() {
           />
           <Picker />
         </div>
-        <div className="w-[60rem] ml-20 flex items-center justify-center mt-4">
+        <div className="w-[60rem] ml-64 flex items-center justify-center mt-4">
           <DataTable />
         </div>
         <div className="w-[60rem] flex items-center justify-center mt-16">

@@ -1,13 +1,25 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import Complete from '../../../public/animations/Complete.json';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useHedera } from '@/contexts/HederaContext';
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
 const success = () => {
+  const { generateAcceptanceLink } = useHedera();
+  const [link, setLink] = useState(generateAcceptanceLink);
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
+  };
+
   return (
     <div className="w-full flex flex-col items-center max-h-[5rem]">
       <div className="flex-1"></div>
@@ -21,9 +33,12 @@ const success = () => {
         them to proceed with the project. Thank you for using our platform to
         streamline your collaboration!
       </span>
-      <Button className="w-[38rem] mt-6 h-[3rem] rounded-[12px] bg-p1 hover:bg-p3 flex flex-row justify-center ">
+      <Button
+        onClick={copyToClipboard}
+        className="w-[38rem] mt-6 h-[3rem] rounded-[12px] bg-p1 hover:bg-p3 flex flex-row justify-center "
+      >
         <span className="flex items-center justify-center text-white font-inter font-medium text-[20px] h-[3rem]">
-          {`https://supercolab.com/#jar12356?pending`}
+          {link}
         </span>
       </Button>
       <span className="flex mt-2 text-center font-inter font-semibold text-b3 text-[13px]">
