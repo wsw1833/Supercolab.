@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose'
+import { Schema, model, models } from 'mongoose';
 import AutoIncrementFactory from 'mongoose-sequence';
 
 const AutoIncrement = AutoIncrementFactory(mongoose);
@@ -6,9 +6,9 @@ const AutoIncrement = AutoIncrementFactory(mongoose);
 const JarSchema = new Schema({
   id: {
     type: Number,
-    unique: true, 
+    unique: true,
   },
-  fileId: String,
+  serializedTxn: String,
   scheduleId: String,
   topicId: String,
   projectName: String,
@@ -20,19 +20,25 @@ const JarSchema = new Schema({
   approvers: [String],
   status: {
     type: String,
-    default: 'PENDING'
+    default: 'Pending',
   },
+  threshold: Number,
+  URILink: String,
   approvals: {
-    type: [String],
-    default: []
+    type: [[String]],
+    default: [],
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
-  expiresAt: Date
-})
+  expiresAt: Date,
+});
 
-JarSchema.plugin(AutoIncrement, { id: 'jar_id_counter', inc_field: 'id', start_seq: 1 });
+JarSchema.plugin(AutoIncrement, {
+  id: 'jar_id_counter',
+  inc_field: 'id',
+  start_seq: 1,
+});
 
-export const Jar = models.Jar || model('Jar', JarSchema)
+export const Jar = models.Jar || model('Jar', JarSchema);

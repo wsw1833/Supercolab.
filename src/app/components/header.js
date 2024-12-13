@@ -14,7 +14,7 @@ export default function header() {
         <Link href={'/'}>
           <span className="text-[28px] gap-3 text-b1 font-inter font-bold flex items-center justify-center">
             <img
-              src="supercolab.svg"
+              src={'./supercolab.svg'}
               alt="logo"
               className="w-[3rem] h-[3rem] flex flex-row"
             />

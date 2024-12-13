@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link.js';
-import { dashboard, addUser, sign, logo, copy } from '../../../public/index.js';
+import { dashboard, addUser, sign } from '../../../public/index.js';
 import {
   Sidebar,
   SidebarContent,
@@ -56,7 +56,7 @@ export default function sidebar({ page }) {
         <div className="flex flex-row justify-center items-center text-[28px] pb-4 text-b1 font-inter font-bold py-4 bg-white">
           SuperColab.
           <span className="w-[2.5rem] h-[2.5rem] flex justify-center items-center">
-            <img src="supercolab.svg" alt="logo" />
+            <img src={'./supercolab.svg'} alt="logo" />
           </span>
         </div>
         <SidebarContent className="bg-white">

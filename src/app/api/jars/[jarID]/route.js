@@ -10,14 +10,3 @@ export async function GET(req) {
 
   return NextResponse.json({ data });
 }
-
-export async function POST(req) {
-  const newJar = await req.json();
-
-  const db = await connectDB();
-  const collection = db.collection('hedera');
-
-  await collection.insertOne(newJar);
-
-  return new NextResponse(newJar, { status: 200 });
-}

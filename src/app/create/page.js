@@ -27,13 +27,14 @@ const tokens = [
 ];
 
 const names = [
-  { name: '0.0.5179066' },
-  { name: '0.0.5184727' },
-  { name: 'Zhang Donkey' },
+  { name: '0.0.2455566' },
+  { name: '0.0.5254354' },
+  { name: '0.0.5214424' },
+  { name: '0.0.5246690' },
 ];
 
 const create = () => {
-  const { pairingData, connect, createJar } = useHedera();
+  const { pairingData, createJar } = useHedera();
 
   const [formData, setFormData] = useState({
     projectName: '',
@@ -43,6 +44,10 @@ const create = () => {
     recipient: '',
     approvers: [],
   });
+
+  const [selectedToken, setSelectedToken] = useState(null);
+  const [selectedApprovers, setSelectedApprovers] = useState([]);
+  const [selectKey, setSelectKey] = useState(0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -54,25 +59,16 @@ const create = () => {
     }
 
     try {
+      console.log(formData);
       const result = await createJar(formData);
 
-      // Copy acceptance link to clipboard
-      navigator.clipboard.writeText(result.acceptanceLink);
-      console.log(
-        'Jar created successfully! Acceptance link copied to clipboard'
-      );
-
       // Redirect to success page
-      router.push(`/success?jarId=${result.jarId}`);
+      //<Link href={`/success?jarId=${result.jarId}`}></Link>;
     } catch (error) {
       // toast.error(error.message);
       console.log(error);
     }
   };
-
-  const [selectedToken, setSelectedToken] = useState(null);
-  const [selectedApprovers, setSelectedApprovers] = useState([]);
-  const [selectKey, setSelectKey] = useState(0);
 
   useEffect(() => {
     if (selectedApprovers.length === 0) {

@@ -4,7 +4,7 @@ import calendar from './calendar.svg';
 import connection from './connection.svg';
 import review from './review.svg';
 import sign from './sign.svg';
-import logo from './logo.jpg';
+import logo from './supercolab.svg';
 import hashpack from './hashpack.png';
 import copy from './copy.png';
 import hedera from './hederaScan.png';

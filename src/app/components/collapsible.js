@@ -1,21 +1,44 @@
-import React, { useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+'use client';
+
+import React, { useEffect, useState, memo } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { useHedera } from '@/contexts/HederaContext';
 
-export default function ApprovalSignatures({
-  signatures = [
+const collapsible = ({ jarData }) => {
+  const signatures = [
     { name: 'Kenny', timestamp: '14 Nov 2024, 12:01:23pm', approved: true },
     { name: 'Zac', timestamp: '15 Nov 2024, 1:21:53pm', approved: false },
     { name: 'Leon', timestamp: '14 Nov 2024, 7:44:18pm', approved: true },
-  ],
-  totalApprovers = 3,
-}) {
+  ];
+
+  const [showApproveButton, setShowApproveButton] = useState(false);
+  const { accountId, signScheduledTransfer } = useHedera();
   const [isOpen, setIsOpen] = useState(true);
+
+  useEffect(() => {
+    if (accountId && jarData) {
+      const approver = jarData.approvers.includes(accountId);
+      const hasSigned = jarData.approvals.includes(accountId);
+      if (approver && !hasSigned) {
+        setShowApproveButton(true);
+      } else {
+        setShowApproveButton(false);
+      }
+    }
+  }, [jarData, accountId]);
+
+  const handleApprove = async () => {
+    const response = await signScheduledTransfer(jarData);
+    if (response) {
+      alert('sign successfully');
+    }
+  };
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-[30rem]">
@@ -27,7 +50,8 @@ export default function ApprovalSignatures({
           <span className="flex items-center gap-2 text-base font-medium">
             <span>Approvals Signatures - </span>
             <span>
-              {signatures.length} out of {totalApprovers} Approver(s)
+              {jarData.approvals.length} out of {jarData.approvers.length}{' '}
+              Approver(s)
             </span>
           </span>
           <ChevronDown
@@ -56,8 +80,9 @@ export default function ApprovalSignatures({
                 )}
               </div>
             </div>
-            {!signature.approved && (
+            {showApproveButton && (
               <Button
+                onClick={handleApprove}
                 variant="outline"
                 className="bg-p1 border border-p1 hover:bg-p1 hover:text-white font-inter font-semibold text-[14px] text-white"
               >
@@ -69,4 +94,6 @@ export default function ApprovalSignatures({
       </CollapsibleContent>
     </Collapsible>
   );
-}
+};
+
+export default collapsible;

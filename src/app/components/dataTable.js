@@ -61,10 +61,6 @@ export default function DataTable() {
     return statusEntry ? statusEntry.color : 'bg-gray-300'; // Default to gray if no match found
   };
 
-  const handleRouteClick = (jarID) => {
-    <Link href={`/details/${jarID}`} />;
-  };
-
   if (loading) {
     return <div>Loading...</div>; // Show loading state
   }
@@ -91,7 +87,7 @@ export default function DataTable() {
         </TableHeader>
         <TableBody>
           {data.map((data) => (
-            <TableRow key={data} onClick={() => handleRouteClick(data.Details)}>
+            <TableRow key={data}>
               <TableCell className="px-4 py-6 text-[18px] text-b1 text-inter font-medium">
                 #{data.id}
               </TableCell>
@@ -114,7 +110,7 @@ export default function DataTable() {
                 </span>
               </TableCell>
               <TableCell className="py-4 text-[18px] text-center text-b1 text-inter font-medium ">
-                <PopDetails jarID={data.description} />
+                <PopDetails jarID={data.id} />
               </TableCell>
             </TableRow>
           ))}

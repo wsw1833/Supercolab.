@@ -7,6 +7,7 @@ import {
   AccountInfoQuery,
   Client,
   FileCreateTransaction,
+  Transaction,
   Hbar,
   LedgerId,
   PublicKey,
@@ -15,10 +16,11 @@ import {
   TransactionId,
   Timestamp,
   TransferTransaction,
+  KeyList,
 } from '@hashgraph/sdk';
 
 const appMetadata = {
-  name: 'Hashgraph Hub Test',
+  name: 'SuperColab Testing',
   description: 'Testing Hashgraph Hub hashconnect',
   icons: [],
   url: 'localhost',
@@ -32,8 +34,8 @@ export function HederaProvider({ children }) {
     HashConnectConnectionState.Disconnected
   );
   const [hashconnect, setHashconnect] = useState(null);
-
-  const accountId = pairingData ? pairingData.accountIds[0] : null;
+  const [accountId, setAccountId] = useState(null);
+  const [topic, setTopic] = useState(null);
 
   useEffect(() => {
     init();
@@ -49,10 +51,14 @@ export function HederaProvider({ children }) {
 
     hashconnect.pairingEvent.on((newPairing) => {
       setPairingData(newPairing);
+      setAccountId(newPairing.accountIds[0]);
+      setTopic(newPairing.topic);
     });
 
     hashconnect.disconnectionEvent.on(() => {
       setPairingData(null);
+      setAccountId(null);
+      setTopic(null);
     });
 
     hashconnect.connectionStatusChangeEvent.on((connectionStatus) => {
@@ -72,6 +78,92 @@ export function HederaProvider({ children }) {
     sessionStorage.setItem(`AddressId`, pairingData.accountIds[0]);
   };
 
+  const getPublicKeys = async (accountIDs) => {
+    let results = []; // Array to store public keys
+    for (const account of accountIDs) {
+      try {
+        console.log(results);
+        const URL = `https://testnet.mirrornode.hedera.com/api/v1/accounts/${account}`;
+        const request = await fetch(URL);
+        const response = await request.json();
+        if (response?.key?.key) {
+          try {
+            let publicKey = PublicKey.fromStringED25519(response.key.key);
+            results.push(publicKey);
+          } catch (conversionError) {
+            console.error(
+              `Failed to convert public key for account ${account}:`,
+              conversionError,
+              `Raw key: ${response.key.key}`
+            );
+          }
+        }
+      } catch (error) {
+        console.error(
+          `Failed to fetch public key for account ${account}:`,
+          error
+        );
+      }
+    }
+    console.log(results);
+    return results; // Return the array of results
+  };
+
+  const createScheduledTransfer = async (
+    accountId,
+    amount,
+    recipient,
+    adminKeys,
+    signer
+  ) => {
+    try {
+      // Calculate expiration time using Timestamp
+      const expirationTime = Timestamp.fromDate(
+        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      );
+
+      const hbarAmount = Hbar.fromString(amount);
+      // Create the transfer transaction that will be scheduled
+      const transferTransaction = new TransferTransaction()
+        .addHbarTransfer(accountId, hbarAmount.negated())
+        .addHbarTransfer(AccountId.fromString(recipient), hbarAmount);
+
+      // Create scheduled transaction
+      const scheduledTransfer = new ScheduleCreateTransaction()
+        .setScheduledTransaction(transferTransaction)
+        .setAdminKey(adminKeys)
+        .setPayerAccountId(accountId)
+        .setExpirationTime(expirationTime);
+
+      const frozenScheduled = await scheduledTransfer.freezeWithSigner(signer);
+
+      const serializedTx = Buffer.from(frozenScheduled.toBytes()).toString(
+        'base64'
+      );
+
+      //console.log('Serialized Transaction:', serializedTx);
+      return serializedTx;
+    } catch (error) {
+      console.error('Transaction Creation Error:', error);
+      alert('Failed to create transaction: ' + error.message);
+    }
+  };
+
+  const createConsensusTopic = async (signer, jarId, submitKeys) => {
+    // Create consensus topic for attestation
+    const topicTransaction = new TopicCreateTransaction()
+      .setTopicMemo(`jar-${jarId}`)
+      .setSubmitKey(submitKeys);
+
+    const frozenTopic = await topicTransaction.freezeWithSigner(signer);
+    const topicSubmit = await frozenTopic.executeWithSigner(signer);
+    const topicReceipt = await topicSubmit.getReceiptWithSigner(signer);
+    const topicId = topicReceipt.topicId;
+
+    console.log('new topic id is' + topicId);
+    return topicId;
+  };
+
   const createJar = async ({
     projectName,
     description,
@@ -87,70 +179,33 @@ export function HederaProvider({ children }) {
     const accountId = AccountId.fromString(pairingData.accountIds[0]);
     const signer = hashconnect.getSigner(accountId);
 
+    const publicKeys = await getPublicKeys(approvers);
+    const threshold = Math.ceil(approvers.length / 2);
+    const adminKeys = new KeyList(publicKeys, threshold);
+    const submitKeys = new KeyList(publicKeys, 1);
+
+    //create schedule transaction
+    const serializedTxn = await createScheduledTransfer(
+      accountId,
+      amount,
+      recipient,
+      adminKeys,
+      signer
+    );
+
     // Create a unique jar ID
     const jarId = crypto.randomUUID();
 
-    // Store project details in Hedera File Service
-    const fileTransaction = new FileCreateTransaction()
-      .setContents(
-        JSON.stringify({
-          projectName,
-          description,
-          amount,
-          tokenType,
-          creator: accountId.toString(),
-          recipient,
-          approvers,
-          createdAt: Date.now(),
-          expiresAt: Date.now() + 3 * 24 * 60 * 60 * 1000, // 3 days
-          status: 'Pending',
-        })
-      )
-      .setMaxTransactionFee(new Hbar(2));
+    //create consensus topic
+    const topicId = createConsensusTopic(signer, jarId, submitKeys);
 
-    const frozenTransaction = await fileTransaction.freezeWithSigner(signer);
-    const fileSubmit = await frozenTransaction.executeWithSigner(signer);
-    const fileReceipt = await fileSubmit.getReceiptWithSigner(signer);
-    const fileId = fileReceipt.fileId;
-
-    // Calculate expiration time using Timestamp
-    const expirationTime = Timestamp.fromDate(
-      new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
-    );
-
-    const hbarAmount = Hbar.fromString(amount);
-
-    // Create the transfer transaction that will be scheduled
-    const transferTransaction = new TransferTransaction()
-      .addHbarTransfer(accountId, hbarAmount.negated())
-      .addHbarTransfer(AccountId.fromString(recipient), hbarAmount);
-
-    // Create scheduled transaction
-    const scheduledTransfer = new ScheduleCreateTransaction()
-      .setScheduledTransaction(transferTransaction)
-      .setExpirationTime(expirationTime);
-
-    const frozenScheduled = await scheduledTransfer.freezeWithSigner(signer);
-    const scheduleSubmit = await frozenScheduled.executeWithSigner(signer);
-    const scheduleReceipt = await scheduleSubmit.getReceiptWithSigner(signer);
-    const scheduleId = scheduleReceipt.scheduleId;
-
-    // Create consensus topic for attestation
-    const topicTransaction = new TopicCreateTransaction().setTopicMemo(
-      `jar-${jarId}`
-    );
-
-    const frozenTopic = await topicTransaction.freezeWithSigner(signer);
-    const topicSubmit = await frozenTopic.executeWithSigner(signer);
-    const topicReceipt = await topicSubmit.getReceiptWithSigner(signer);
-    const topicId = topicReceipt.topicId;
-
+    const acceptLink = generateAcceptanceLink(jarId);
     // Store the jar data in local storage for frontend reference
     const jarData = {
       id: jarId,
-      fileId: fileId.toString(),
-      scheduleId: scheduleId.toString(),
-      topicId: topicId.toString(),
+      serializedTxn,
+      scheduleId: null,
+      topicId: topicId,
       projectName,
       description,
       amount,
@@ -159,9 +214,11 @@ export function HederaProvider({ children }) {
       recipient,
       approvers,
       status: 'PENDING',
+      URILink: acceptLink,
+      threshold,
       approvals: [],
       createdAt: Date.now(),
-      expiresAt: Date.now() + 3 * 24 * 60 * 60 * 1000,
+      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
     };
 
     const response = await fetch('/api/jars', {
@@ -180,13 +237,111 @@ export function HederaProvider({ children }) {
 
     return {
       jarId,
-      acceptanceLink: `${appMetadata.url}/accept/${jarId}`,
+      acceptanceLink: acceptLink,
     };
   };
 
   const generateAcceptanceLink = (jarId) => {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     return `${baseUrl}/accept/${jarId}`;
+  };
+
+  const signScheduledTransfer = async (jarData) => {
+    if (!jarData.serializedTxn) {
+      alert('No transaction to sign!');
+      return;
+    }
+    try {
+      const signer = hashconnect.getSigner(accountId);
+      // Deserialize the transaction
+      const deserializedTx = Transaction.fromBytes(
+        Buffer.from(jarData.serializedTxn, 'base64')
+      );
+
+      // Check if current user is an approver
+      if (!jarData.approvers.includes(accountId)) {
+        alert('You are not authorized to sign this transaction!');
+        return;
+      }
+
+      // Check if already signed
+      if (jarData.approvals.includes(accountId)) {
+        alert('You have already signed this transaction!');
+        return;
+      }
+
+      // Sign the deserialized transaction
+      const signature = await signer.sign(deserializedTx);
+
+      const totalApprovers = updateJarApproval(
+        jarData.id,
+        accountId,
+        signature
+      );
+
+      // Check if threshold is met
+      if (totalApprovers >= jarData.threshold) {
+        await executeTransaction(deserializedTx, jarData.approvals, jarData.id);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Signing Error:', error);
+      alert('Failed to sign transaction: ' + error.message);
+    }
+  };
+
+  const updateJarApproval = async (jarId, addressId, signature) => {
+    try {
+      let jar = JSON.parse(localStorage.getItem(`jar-${jarId}`));
+
+      if (!jar) {
+        console.error('Jar data not found in localStorage');
+        return;
+      }
+
+      jar.approvals.push([addressId, signature]);
+
+      // Save the updated jar back to localStorage
+      localStorage.setItem(`jar-${jarId}`, JSON.stringify(jar));
+
+      console.log('Jar updated:', jar);
+      return jar.approvals.length;
+    } catch (error) {
+      console.error('Error updating approval:', error);
+    }
+  };
+
+  const executeTransaction = async (deserializedTx, approvals, jarId) => {
+    try {
+      const accountId = AccountId.fromString(pairingData.accountIds[0]);
+      const signer = hashconnect.getSigner(accountId);
+
+      let jar = JSON.parse(localStorage.getItem(`jar-${jarId}`));
+      const accountIds = approvals.map(([accountId, signature]) => accountId); // Extract accountIds
+      const publicKeys = await getPublicKeys(accountIds);
+
+      // Add collected signatures to transaction
+      for (let i = 0; i < approvals.length; i++) {
+        const [accountId, signature] = approvals[i];
+        const publicKey = publicKeys[i];
+
+        deserializedTx.addSignature(publicKey, signature);
+      }
+
+      // Execute the transaction
+      const txResponse = await deserializedTx.executeWithSigner(signer);
+      const receipt = await txResponse.getReceiptWithSigner(signer);
+
+      jar.scheduleId = receipt.scheduleId;
+      localStorage.setItem(`jar-${jarId}`, JSON.stringify(jar));
+
+      console.log('Transaction executed:', receipt);
+      alert('Transaction successfully executed!');
+    } catch (error) {
+      console.error('Execution Error:', error);
+      alert('Transaction execution failed: ' + error.message);
+    }
   };
 
   const checkJarExpiration = async (jarId) => {
@@ -231,6 +386,8 @@ export function HederaProvider({ children }) {
     checkJarExpiration,
     refundDeposit,
     accountId,
+    getPublicKeys,
+    signScheduledTransfer,
   };
 
   return (
