@@ -4,19 +4,17 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { HashConnect, HashConnectConnectionState } from 'hashconnect';
 import {
   AccountId,
-  AccountInfoQuery,
-  Client,
-  FileCreateTransaction,
-  Transaction,
   Hbar,
   LedgerId,
   PublicKey,
   ScheduleCreateTransaction,
+  AccountCreateTransaction,
   TopicCreateTransaction,
-  TransactionId,
   Timestamp,
   TransferTransaction,
   KeyList,
+  ScheduleSignTransaction,
+  ScheduleInfoQuery,
 } from '@hashgraph/sdk';
 
 const appMetadata = {
@@ -35,7 +33,6 @@ export function HederaProvider({ children }) {
   );
   const [hashconnect, setHashconnect] = useState(null);
   const [accountId, setAccountId] = useState(null);
-  const [topic, setTopic] = useState(null);
 
   useEffect(() => {
     init();
@@ -52,13 +49,11 @@ export function HederaProvider({ children }) {
     hashconnect.pairingEvent.on((newPairing) => {
       setPairingData(newPairing);
       setAccountId(newPairing.accountIds[0]);
-      setTopic(newPairing.topic);
     });
 
     hashconnect.disconnectionEvent.on(() => {
       setPairingData(null);
       setAccountId(null);
-      setTopic(null);
     });
 
     hashconnect.connectionStatusChangeEvent.on((connectionStatus) => {
@@ -75,7 +70,7 @@ export function HederaProvider({ children }) {
 
   const connect = async () => {
     await hashconnect?.openPairingModal();
-    sessionStorage.setItem(`AddressId`, pairingData.accountIds[0]);
+    localStorage.setItem(`AddressId`, pairingData.accountIds[0]);
   };
 
   const getPublicKeys = async (accountIDs) => {
@@ -109,11 +104,31 @@ export function HederaProvider({ children }) {
     return results; // Return the array of results
   };
 
+  const createMultiSig = async (threshold, publicKeys, amount, signer) => {
+    const keyList = new KeyList(publicKeys, threshold);
+
+    const hbarAmount = Hbar.fromString(amount);
+
+    // Create account with KeyList
+    const createAccountTransaction = new AccountCreateTransaction()
+      .setInitialBalance(hbarAmount)
+      .setKey(keyList);
+
+    const freezeAccount = await createAccountTransaction.freezeWithSigner(
+      signer
+    );
+    const response = await freezeAccount.executeWithSigner(signer);
+    const receipt = await response.getReceiptWithSigner(signer);
+
+    console.log('The multi-sig account id is :', receipt.accountId.toString());
+    return receipt.accountId.toString();
+  };
+
   const createScheduledTransfer = async (
-    accountId,
+    publicKeys,
     amount,
     recipient,
-    adminKeys,
+    multiSig,
     signer
   ) => {
     try {
@@ -122,27 +137,31 @@ export function HederaProvider({ children }) {
         new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
       );
 
+      const adminKeys = new KeyList(publicKeys, 1);
       const hbarAmount = Hbar.fromString(amount);
       // Create the transfer transaction that will be scheduled
       const transferTransaction = new TransferTransaction()
-        .addHbarTransfer(accountId, hbarAmount.negated())
+        .addHbarTransfer(AccountId.fromString(multiSig), hbarAmount.negated())
         .addHbarTransfer(AccountId.fromString(recipient), hbarAmount);
 
       // Create scheduled transaction
       const scheduledTransfer = new ScheduleCreateTransaction()
         .setScheduledTransaction(transferTransaction)
-        .setAdminKey(adminKeys)
-        .setPayerAccountId(accountId)
-        .setExpirationTime(expirationTime);
+        .setExpirationTime(expirationTime)
+        .setAdminKey(adminKeys);
 
-      const frozenScheduled = await scheduledTransfer.freezeWithSigner(signer);
-
-      const serializedTx = Buffer.from(frozenScheduled.toBytes()).toString(
-        'base64'
+      const freezedScheduled = await scheduledTransfer.freezeWithSigner(signer);
+      const executedScheduled = await freezedScheduled.executeWithSigner(
+        signer
       );
+      const receipt = await executedScheduled.getReceiptWithSigner(signer);
 
-      //console.log('Serialized Transaction:', serializedTx);
-      return serializedTx;
+      const scheduleId = receipt.scheduleId.toString();
+      console.log('The schedule ID is ' + scheduleId);
+
+      const scheduledTxId = receipt.scheduledTransactionId.toString();
+      console.log('The scheduled transaction ID is ' + scheduledTxId);
+      return { scheduleId, scheduledTxId };
     } catch (error) {
       console.error('Transaction Creation Error:', error);
       alert('Failed to create transaction: ' + error.message);
@@ -161,7 +180,7 @@ export function HederaProvider({ children }) {
     const topicId = topicReceipt.topicId;
 
     console.log('new topic id is' + topicId);
-    return topicId;
+    return topicId.toString();
   };
 
   const createJar = async ({
@@ -181,17 +200,26 @@ export function HederaProvider({ children }) {
 
     const publicKeys = await getPublicKeys(approvers);
     const threshold = Math.ceil(approvers.length / 2);
-    const adminKeys = new KeyList(publicKeys, threshold);
     const submitKeys = new KeyList(publicKeys, 1);
 
-    //create schedule transaction
-    const serializedTxn = await createScheduledTransfer(
-      accountId,
+    const multiSig = await createMultiSig(
+      threshold,
+      publicKeys,
       amount,
-      recipient,
-      adminKeys,
       signer
     );
+
+    //create schedule transaction
+    const scheduled = await createScheduledTransfer(
+      publicKeys,
+      amount,
+      recipient,
+      multiSig,
+      signer
+    );
+
+    const scheduleId = scheduled.scheduleId;
+    const scheduledTxId = scheduled.scheduledTxId;
 
     // Create a unique jar ID
     const jarId = crypto.randomUUID();
@@ -203,9 +231,10 @@ export function HederaProvider({ children }) {
     // Store the jar data in local storage for frontend reference
     const jarData = {
       id: jarId,
-      serializedTxn,
-      scheduleId: null,
-      topicId: topicId,
+      multiSig,
+      scheduleId,
+      scheduledTxId,
+      topicId,
       projectName,
       description,
       amount,
@@ -247,43 +276,59 @@ export function HederaProvider({ children }) {
   };
 
   const signScheduledTransfer = async (jarData) => {
-    if (!jarData.serializedTxn) {
+    const scheduleId = jarData.scheduleId.toString();
+    if (!scheduleId) {
       alert('No transaction to sign!');
       return;
     }
     try {
+      const accountId = AccountId.fromString(pairingData.accountIds[0]);
+      const stringId = accountId.toString();
       const signer = hashconnect.getSigner(accountId);
-      // Deserialize the transaction
-      const deserializedTx = Transaction.fromBytes(
-        Buffer.from(jarData.serializedTxn, 'base64')
-      );
+
+      console.log('string', stringId);
+      console.log('signer', signer);
 
       // Check if current user is an approver
-      if (!jarData.approvers.includes(accountId)) {
+      if (!jarData.approvers.includes(stringId)) {
         alert('You are not authorized to sign this transaction!');
         return;
       }
 
       // Check if already signed
-      if (jarData.approvals.includes(accountId)) {
+      if (jarData.approvals.includes(stringId)) {
         alert('You have already signed this transaction!');
         return;
       }
 
       // Sign the deserialized transaction
-      const signature = await signer.sign(deserializedTx);
-
-      const totalApprovers = updateJarApproval(
-        jarData.id,
-        accountId,
-        signature
+      const signature = await new ScheduleSignTransaction().setScheduleId(
+        scheduleId
       );
 
-      // Check if threshold is met
-      if (totalApprovers >= jarData.threshold) {
-        await executeTransaction(deserializedTx, jarData.approvals, jarData.id);
-      }
+      const freezeSign = await signature.freezeWithSigner(signer);
+      const submitSign = await freezeSign.executeWithSigner(signer);
+      const receipt = await submitSign.getReceiptWithSigner(signer);
+      consoole.log('receipt', receipt);
 
+      const query = await new ScheduleInfoQuery()
+        .setScheduleId(scheduleId)
+        .executeWithSigner(signer);
+
+      console.log('query', query);
+
+      const URL = `https://testnet.mirrornode.hedera.com/api/v1/schedules/${scheduleId}`;
+      const request = await fetch(URL);
+      const response = await request.json();
+      if (response) {
+        const executed = response.executed_timestamp;
+        if (executed) {
+          console.log(
+            `this transaction ${scheduleId} has been executed at `,
+            executed
+          );
+        }
+      }
       return true;
     } catch (error) {
       console.error('Signing Error:', error);
@@ -309,38 +354,6 @@ export function HederaProvider({ children }) {
       return jar.approvals.length;
     } catch (error) {
       console.error('Error updating approval:', error);
-    }
-  };
-
-  const executeTransaction = async (deserializedTx, approvals, jarId) => {
-    try {
-      const accountId = AccountId.fromString(pairingData.accountIds[0]);
-      const signer = hashconnect.getSigner(accountId);
-
-      let jar = JSON.parse(localStorage.getItem(`jar-${jarId}`));
-      const accountIds = approvals.map(([accountId, signature]) => accountId); // Extract accountIds
-      const publicKeys = await getPublicKeys(accountIds);
-
-      // Add collected signatures to transaction
-      for (let i = 0; i < approvals.length; i++) {
-        const [accountId, signature] = approvals[i];
-        const publicKey = publicKeys[i];
-
-        deserializedTx.addSignature(publicKey, signature);
-      }
-
-      // Execute the transaction
-      const txResponse = await deserializedTx.executeWithSigner(signer);
-      const receipt = await txResponse.getReceiptWithSigner(signer);
-
-      jar.scheduleId = receipt.scheduleId;
-      localStorage.setItem(`jar-${jarId}`, JSON.stringify(jar));
-
-      console.log('Transaction executed:', receipt);
-      alert('Transaction successfully executed!');
-    } catch (error) {
-      console.error('Execution Error:', error);
-      alert('Transaction execution failed: ' + error.message);
     }
   };
 
