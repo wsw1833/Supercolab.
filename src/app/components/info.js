@@ -14,8 +14,8 @@ const statuscode = [
 ];
 
 const role = [
-  { role: 'Receiver', color: 'hover:bg-p1 bg-p1', action: 'Accept Jar' },
-  { role: 'Creator', color: 'hover:bg-red bg-red', action: 'Terminate' },
+  //{ role: 'Receiver', color: 'hover:bg-p1 bg-p1', action: 'Accept Jar' },
+  { role: 'Creator', color: 'hover:bg-red bg-red', action: 'Terminate' }, //terminate button and refund from multisig to creator OR auto refund once expired.
   { role: 'Approver', color: 'bg-none' },
 ];
 

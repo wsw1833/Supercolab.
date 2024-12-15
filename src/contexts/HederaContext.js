@@ -83,7 +83,12 @@ export function HederaProvider({ children }) {
         const response = await request.json();
         if (response?.key?.key) {
           try {
-            let publicKey = PublicKey.fromStringED25519(response.key.key);
+            let publicKey;
+            if (response.key.key.includes('ed25519')) {
+              publicKey = PublicKey.fromStringED25519(response.key.key); // Handle ED25519 keys
+            } else {
+              publicKey = PublicKey.fromString(response.key.key); // Handle other key formats
+            }
             results.push(publicKey);
           } catch (conversionError) {
             console.error(
@@ -125,6 +130,7 @@ export function HederaProvider({ children }) {
   };
 
   const createScheduledTransfer = async (
+    jarId,
     publicKeys,
     amount,
     recipient,
@@ -137,8 +143,11 @@ export function HederaProvider({ children }) {
         new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
       );
 
-      const adminKeys = new KeyList(publicKeys, 1);
+      const adminKeys =
+        publicKeys.length > 1 ? new KeyList(publicKeys, 1) : publicKeys[0];
+
       const hbarAmount = Hbar.fromString(amount);
+
       // Create the transfer transaction that will be scheduled
       const transferTransaction = new TransferTransaction()
         .addHbarTransfer(AccountId.fromString(multiSig), hbarAmount.negated())
@@ -148,6 +157,7 @@ export function HederaProvider({ children }) {
       const scheduledTransfer = new ScheduleCreateTransaction()
         .setScheduledTransaction(transferTransaction)
         .setExpirationTime(expirationTime)
+        .setScheduleMemo(`Jar-${jarId} Scheduled Transaction`)
         .setAdminKey(adminKeys);
 
       const freezedScheduled = await scheduledTransfer.freezeWithSigner(signer);
@@ -155,6 +165,10 @@ export function HederaProvider({ children }) {
         signer
       );
       const receipt = await executedScheduled.getReceiptWithSigner(signer);
+
+      if (!receipt.scheduleId) {
+        throw new Error('No scheduleId found in transaction receipt.');
+      }
 
       const scheduleId = receipt.scheduleId.toString();
       console.log('The schedule ID is ' + scheduleId);
@@ -171,7 +185,7 @@ export function HederaProvider({ children }) {
   const createConsensusTopic = async (signer, jarId, submitKeys) => {
     // Create consensus topic for attestation
     const topicTransaction = new TopicCreateTransaction()
-      .setTopicMemo(`jar-${jarId}`)
+      .setTopicMemo(`jar-${jarId} HCS`)
       .setSubmitKey(submitKeys);
 
     const frozenTopic = await topicTransaction.freezeWithSigner(signer);
@@ -179,7 +193,7 @@ export function HederaProvider({ children }) {
     const topicReceipt = await topicSubmit.getReceiptWithSigner(signer);
     const topicId = topicReceipt.topicId;
 
-    console.log('new topic id is' + topicId);
+    console.log('new topic id is ' + topicId);
     return topicId.toString();
   };
 
@@ -191,8 +205,11 @@ export function HederaProvider({ children }) {
     recipient,
     approvers,
   }) => {
-    if (!hashconnect || !pairingData) {
-      throw new Error('Wallet not connected');
+    if (!hashconnect) {
+      throw new Error('HashConnect is not initialized.');
+    }
+    if (!pairingData || !pairingData.accountIds?.length) {
+      throw new Error('Wallet not connected or pairing data is invalid.');
     }
 
     const accountId = AccountId.fromString(pairingData.accountIds[0]);
@@ -209,8 +226,12 @@ export function HederaProvider({ children }) {
       signer
     );
 
-    //create schedule transaction
+    // Create a unique jar ID
+    const jarId = crypto.randomUUID();
+
+    // Create schedule transaction
     const scheduled = await createScheduledTransfer(
+      jarId,
       publicKeys,
       amount,
       recipient,
@@ -221,14 +242,10 @@ export function HederaProvider({ children }) {
     const scheduleId = scheduled.scheduleId;
     const scheduledTxId = scheduled.scheduledTxId;
 
-    // Create a unique jar ID
-    const jarId = crypto.randomUUID();
-
-    //create consensus topic
-    const topicId = createConsensusTopic(signer, jarId, submitKeys);
+    const topicId = await createConsensusTopic(signer, jarId, submitKeys);
 
     const acceptLink = generateAcceptanceLink(jarId);
-    // Store the jar data in local storage for frontend reference
+
     const jarData = {
       id: jarId,
       multiSig,
@@ -245,7 +262,7 @@ export function HederaProvider({ children }) {
       status: 'PENDING',
       URILink: acceptLink,
       threshold,
-      approvals: [],
+      approvals: [accountId.toString(), Date.now()],
       createdAt: Date.now(),
       expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
     };
@@ -309,25 +326,25 @@ export function HederaProvider({ children }) {
       const freezeSign = await signature.freezeWithSigner(signer);
       const submitSign = await freezeSign.executeWithSigner(signer);
       const receipt = await submitSign.getReceiptWithSigner(signer);
-      consoole.log('receipt', receipt);
+      console.log('receipt', receipt);
 
-      const query = await new ScheduleInfoQuery()
-        .setScheduleId(scheduleId)
-        .executeWithSigner(signer);
+      if (receipt) {
+        updateJarApproval(jarData.id, stringId);
+      }
 
-      console.log('query', query);
+      const query = await new ScheduleInfoQuery().setScheduleId(scheduleId);
+
+      console.log('queryInfo', query);
 
       const URL = `https://testnet.mirrornode.hedera.com/api/v1/schedules/${scheduleId}`;
       const request = await fetch(URL);
       const response = await request.json();
-      if (response) {
-        const executed = response.executed_timestamp;
-        if (executed) {
-          console.log(
-            `this transaction ${scheduleId} has been executed at `,
-            executed
-          );
-        }
+      if (response.executed_timestamp != null) {
+        // add execution timestamp at mongodb and change status to success for jar.
+        console.log(
+          `This transaction ${scheduleId} has been executed at `,
+          response.executed_timestamp
+        );
       }
       return true;
     } catch (error) {
@@ -336,7 +353,7 @@ export function HederaProvider({ children }) {
     }
   };
 
-  const updateJarApproval = async (jarId, addressId, signature) => {
+  const updateJarApproval = async (jarId, addressId) => {
     try {
       let jar = JSON.parse(localStorage.getItem(`jar-${jarId}`));
 
@@ -345,7 +362,9 @@ export function HederaProvider({ children }) {
         return;
       }
 
-      jar.approvals.push([addressId, signature]);
+      const Timestamp = Date.now();
+
+      jar.approvals.push([addressId, Timestamp]);
 
       // Save the updated jar back to localStorage
       localStorage.setItem(`jar-${jarId}`, JSON.stringify(jar));
@@ -360,6 +379,7 @@ export function HederaProvider({ children }) {
   const checkJarExpiration = async (jarId) => {
     const jar = JSON.parse(localStorage.getItem(`jar_${jarId}`));
     if (jar && jar.status === 'PENDING' && Date.now() > jar.expiresAt) {
+      //update jar status to expired and auto-trigger refund back to creator.
       await refundDeposit(jar);
       jar.status = 'EXPIRED';
       localStorage.setItem(`jar_${jarId}`, JSON.stringify(jar));

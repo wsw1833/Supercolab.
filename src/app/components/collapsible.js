@@ -26,6 +26,7 @@ const collapsible = ({ jarData }) => {
       const approver = jarData.approvers.includes(accountId);
       const hasSigned = jarData.approvals.includes(accountId);
       if (approver && !hasSigned) {
+        // if jar status is success hide all approve button
         setShowApproveButton(true);
       } else {
         setShowApproveButton(false);
@@ -36,7 +37,7 @@ const collapsible = ({ jarData }) => {
   const handleApprove = async () => {
     const response = await signScheduledTransfer(jarData);
     if (response) {
-      alert('sign successfully');
+      //alert('sign successfully');
     }
   };
 

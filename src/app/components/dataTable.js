@@ -98,7 +98,7 @@ export default function DataTable() {
                 {data.amount} HBAR
               </TableCell>
               <TableCell className="py-4 text-[18px] text-b1 text-inter font-medium">
-                {data.createdAt}
+                {new Date(data.createdAt).toLocaleDateString('en-GB')}
               </TableCell>
               <TableCell className="py-4 text-[18px] text-center text-b1 text-inter font-medium">
                 <span
