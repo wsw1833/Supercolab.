@@ -70,7 +70,6 @@ export function HederaProvider({ children }) {
 
   const connect = async () => {
     await hashconnect?.openPairingModal();
-    localStorage.setItem(`AddressId`, pairingData.accountIds[0]);
   };
 
   const getPublicKeys = async (accountIDs) => {
@@ -362,7 +361,7 @@ export function HederaProvider({ children }) {
         return;
       }
 
-      const Timestamp = Date.now();
+      const Timestamp = date.now();
 
       jar.approvals.push([addressId, Timestamp]);
 

@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 import React from 'react';
-import Link from 'next/link';
 import { Form } from '@/components/ui/form';
 import { useHedera } from '@/contexts/HederaContext';
 
@@ -63,7 +62,9 @@ const create = () => {
       const result = await createJar(formData);
 
       // Redirect to success page
-      //<Link href={`/success?jarId=${result.jarId}`}></Link>;
+      if (result) {
+        window.location.href = `/success?jarID=${result.jarId}`;
+      }
     } catch (error) {
       // toast.error(error.message);
       console.log(error);

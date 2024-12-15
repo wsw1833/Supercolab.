@@ -36,9 +36,12 @@ const items = [
 
 export default function sidebar({ page }) {
   const { accountId } = useHedera();
-  const [isActive, setIsActive] = useState('Dashboard');
+  const [isActive, setIsActive] = useState(
+    sessionStorage.getItem('menu') || 'Dashboard'
+  );
 
   const handleMenuClick = (menu) => {
+    sessionStorage.setItem('menu', menu);
     setIsActive(menu); // Update active menu on click
   };
 

@@ -5,13 +5,14 @@ import dynamic from 'next/dynamic';
 import Complete from '../../../public/animations/Complete.json';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { useHedera } from '@/contexts/HederaContext';
 
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false });
 const success = () => {
-  const { generateAcceptanceLink } = useHedera();
-  const [link, setLink] = useState(generateAcceptanceLink);
-
+  const url = new URLSearchParams(window.location.search);
+  const jarId = url.get('jarID');
+  const link = `${
+    process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  }/accept/${jarId}`;
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(link);
