@@ -9,38 +9,68 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { useHedera } from '@/contexts/HederaContext';
+import { useDataContext } from '@/contexts/dataContext';
+import { format } from 'date-fns';
 
-const collapsible = ({ jarData }) => {
-  const signatures = [
-    { name: 'Kenny', timestamp: '14 Nov 2024, 12:01:23pm', approved: true },
-    { name: 'Zac', timestamp: '15 Nov 2024, 1:21:53pm', approved: false },
-    { name: 'Leon', timestamp: '14 Nov 2024, 7:44:18pm', approved: true },
-  ];
+const collapsible = () => {
+  const formatTimestamp = (timestamp) => {
+    const options = {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true, // 24-hour format
+    };
 
-  const [showApproveButton, setShowApproveButton] = useState(false);
-  const { accountId, signScheduledTransfer } = useHedera();
+    return new Intl.DateTimeFormat('en-GB', options).format(timestamp);
+  };
+
+  const { accountId, signScheduledTransfer, updateJarStatus } = useHedera();
   const [isOpen, setIsOpen] = useState(true);
+  const { jarDetails, details, error } = useDataContext();
+  const [signatures, setSignatures] = useState([]);
 
+  let approver;
+  let hasSigned;
   useEffect(() => {
-    console.log('collpase', jarData);
-    if (accountId && jarData) {
-      const approver = jarData.approvers.includes(accountId);
-      const hasSigned = jarData.approvals.includes(accountId);
-      if (approver && !hasSigned) {
-        // if jar status is success hide all approve button
-        setShowApproveButton(true);
-      } else {
-        setShowApproveButton(false);
+    const delay = setTimeout(() => {
+      if (accountId && jarDetails) {
+        hasSigned = jarDetails.approvals.some(
+          (approval) => approval[0] === accountId
+        );
+        const signatures = jarDetails.approvers.map((approver) => {
+          // Check if the approver exists in the approvals list
+          const approval = jarDetails.approvals.find(
+            ([name]) => name === approver
+          );
+
+          const isApproved = approval && approval[1] !== null;
+
+          return {
+            name: approver,
+            timestamp: approval ? approval[1] : null, // Get the timestamp if approved
+            approved: isApproved, // True if approver is found in approvals
+          };
+        });
+        setSignatures(signatures);
       }
-    }
-  }, [jarData, accountId]);
+    }, 1000);
+
+    return () => clearTimeout(delay);
+  }, [accountId, jarDetails]);
 
   const handleApprove = async () => {
-    const response = await signScheduledTransfer(jarData);
+    const response = await signScheduledTransfer(jarDetails);
     if (response) {
-      //alert('sign successfully');
+      //update component using toast.
     }
   };
+
+  if (details || !jarDetails) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-[30rem]">
@@ -52,7 +82,7 @@ const collapsible = ({ jarData }) => {
           <span className="flex items-center gap-2 text-base font-medium">
             <span>Approvals Signatures - </span>
             <span>
-              {jarData.approvals.length} out of {jarData.approvers.length}{' '}
+              {jarDetails.approvals.length} out of {jarDetails.approvers.length}{' '}
               Approver(s)
             </span>
           </span>
@@ -70,27 +100,28 @@ const collapsible = ({ jarData }) => {
             className="flex justify-between items-center align-middle rounded-lg border-2 border-p2 bg-card p-3"
           >
             <div className="flex-1">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between">
                 <span className="text-lg w-[13rem]">{signature.name}</span>
-                {signature.approved && (
-                  <img src="/check.svg" className="h-6 w-6" />
-                )}
-                {signature.approved && (
-                  <span className="text-muted-foreground">
-                    {signature.timestamp}
-                  </span>
+                {signature.approved ? (
+                  <>
+                    <img src="/check.svg" className="h-7 w-7" />
+                    <span className="text-muted-foreground">
+                      {formatTimestamp(signature.timestamp)}
+                    </span>
+                  </>
+                ) : (
+                  accountId === signature.name && (
+                    <Button
+                      onClick={handleApprove}
+                      variant="outline"
+                      className="bg-p1 border border-p1 hover:bg-p1 hover:text-white font-inter font-semibold text-[14px] text-white"
+                    >
+                      Approve
+                    </Button>
+                  )
                 )}
               </div>
             </div>
-            {showApproveButton && (
-              <Button
-                onClick={handleApprove}
-                variant="outline"
-                className="bg-p1 border border-p1 hover:bg-p1 hover:text-white font-inter font-semibold text-[14px] text-white"
-              >
-                Approve
-              </Button>
-            )}
           </div>
         ))}
       </CollapsibleContent>

@@ -4,9 +4,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useDataContext } from '@/contexts/dataContext';
 import Link from 'next/link';
 
 export default function PopDetails({ jarID }) {
+  const { setDetails } = useDataContext();
+  const handleDetails = () => {
+    setDetails(true);
+  };
   return (
     <DropdownMenu className="align-top">
       <DropdownMenuTrigger className="align-top">...</DropdownMenuTrigger>
@@ -17,7 +22,10 @@ export default function PopDetails({ jarID }) {
         </DropdownMenuItem>
         {/*can pass the jarID for details here */}
         <Link href={`/details/${jarID}`}>
-          <DropdownMenuItem className="font-inter font-medium">
+          <DropdownMenuItem
+            className="font-inter font-medium"
+            onClick={handleDetails}
+          >
             <img src="details.svg" alt="copy" className="w-5 h-5" />
             View Details
           </DropdownMenuItem>

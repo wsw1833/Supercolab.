@@ -15,7 +15,9 @@ import {
   KeyList,
   ScheduleSignTransaction,
   ScheduleInfoQuery,
+  Client,
 } from '@hashgraph/sdk';
+import { hbar } from '../../public';
 
 const appMetadata = {
   name: 'SuperColab Testing',
@@ -261,7 +263,7 @@ export function HederaProvider({ children }) {
       status: 'Pending',
       URILink: acceptLink,
       threshold,
-      approvals: [accountId.toString(), Date.now()],
+      approvals: [[accountId.toString(), Date.now()]],
       createdAt: Date.now(),
       expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
     };
@@ -281,7 +283,7 @@ export function HederaProvider({ children }) {
       throw new Error('Failed to store jar data in MongoDB');
     }
 
-    localStorage.setItem(`jar-${jarId}`, JSON.stringify(jarData));
+    updateJarStatus(jarData, 'Success');
 
     return {
       jarId,
@@ -305,9 +307,6 @@ export function HederaProvider({ children }) {
       const stringId = accountId.toString();
       const signer = hashconnect.getSigner(accountId);
 
-      console.log('string', stringId);
-      console.log('signer', signer);
-
       // Check if current user is an approver
       if (!jarData.approvers.includes(stringId)) {
         alert('You are not authorized to sign this transaction!');
@@ -330,24 +329,25 @@ export function HederaProvider({ children }) {
       const receipt = await submitSign.getReceiptWithSigner(signer);
       console.log('receipt', receipt);
 
-      if (receipt) {
-        updateJarApproval(jarData.id, stringId);
-      }
+      const newJar = await updateJarApproval(jarData.jarId, stringId);
+
+      updateJarStatus(newJar, 'Success');
 
       // const query = await new ScheduleInfoQuery().setScheduleId(scheduleId);
-
       // console.log('queryInfo', query);
 
       const URL = `https://testnet.mirrornode.hedera.com/api/v1/schedules/${scheduleId}`;
       const request = await fetch(URL);
       const response = await request.json();
-      if (response.executed_timestamp != null) {
+      console.log(response);
+      if (response.executed_timestamp) {
         // add execution timestamp at mongodb and change status to success for jar.
         console.log(
           `This transaction ${scheduleId} has been executed at `,
           response.executed_timestamp
         );
       }
+
       return true;
     } catch (error) {
       console.error('Signing Error:', error);
@@ -357,57 +357,121 @@ export function HederaProvider({ children }) {
 
   const updateJarApproval = async (jarId, addressId) => {
     try {
-      // Construct the data to be sent to the backend
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/jar/jarApprovals/${jarId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/jar/jarApprovals`,
         {
-          method: 'PUT',
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ addressId }), // Sending only the addressId
+          body: JSON.stringify({ addressId, jarId }),
         }
       );
 
       if (!response.ok) {
         throw new Error('Failed to update approval');
       }
+      const data = await response.json();
+      return data.jar;
       console.log('jar approvals updated successfully');
     } catch (error) {
       console.error('Error updating approval:', error);
     }
   };
 
-  const checkJarExpiration = async (jarId) => {
-    const jar = JSON.parse(localStorage.getItem(`jar_${jarId}`));
-    if (jar && jar.status === 'PENDING' && Date.now() > jar.expiresAt) {
-      //update jar status to expired and auto-trigger refund back to creator.
-      await refundDeposit(jar);
-      jar.status = 'EXPIRED';
-      localStorage.setItem(`jar_${jarId}`, JSON.stringify(jar));
-      return true;
+  const updateJarStatus = async (jarData, status) => {
+    const URL = `${process.env.NEXT_PUBLIC_API_URL}/jar/jarStatus`;
+    console.log('here1', jarData.approvals.length >= jarData.threshold);
+    if (
+      jarData.status === 'Pending' &&
+      jarData.approvals.length >= jarData.threshold
+    ) {
+      try {
+        const response = await fetch(URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ jarData, status }),
+        });
+
+        console.log(response);
+
+        if (!response.ok) {
+          throw new Error('Failed to update approval');
+        }
+        console.log('jar approvals updated successfully');
+      } catch (error) {
+        console.error('Error updating approval:', error);
+      }
     }
-    return false;
+
+    if (status === 'Failed') {
+      await refundDeposit(jarData);
+      try {
+        const response = await fetch(URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ jarData, status }),
+        });
+
+        console.log(response);
+
+        if (!response.ok) {
+          throw new Error('Failed to update approval');
+        }
+        console.log('jar approvals updated successfully');
+      } catch (error) {
+        console.error('Error updating approval:', error);
+      }
+    }
+
+    if (jarData.status === 'Pending' && Date.now() > jarData.expiresAt) {
+      //update jar status to expired and auto-trigger refund back to creator.
+      await refundDeposit(jarData);
+      const statuscode = 'Expired';
+      try {
+        const response = await fetch(URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ jarData, statuscode }),
+        });
+
+        console.log(response);
+
+        if (!response.ok) {
+          throw new Error('Failed to update approval');
+        }
+        console.log('jar approvals updated successfully');
+      } catch (error) {
+        console.error('Error updating approval:', error);
+      }
+    }
   };
 
   const refundDeposit = async (jar) => {
     if (!hashconnect || !pairingData) {
       throw new Error('Wallet not connected');
     }
-
     const accountId = AccountId.fromString(pairingData.accountIds[0]);
     const signer = hashconnect.getSigner(accountId);
+    const publicKey = await getPublicKeys([accountId]);
+    const adminKey = new KeyList(publicKey, 1);
+    const hbarAmount = Hbar.fromString(jar.amount);
 
     const refundTransaction = new TransferTransaction()
-      .addHbarTransfer(
-        AccountId.fromString(jar.creatorAddress),
-        new Hbar.fromString(jar.amount)
-      )
-      .setTransactionMemo(`Refund for Jar: ${jar.id}`)
-      .freeze();
+      .addHbarTransfer(AccountId.fromString(jar.multiSig), hbarAmount.negated())
+      .addHbarTransfer(AccountId.fromString(jar.creator), hbarAmount)
+      .setTransactionMemo(`Refund for Jar: ${jar.id}`);
 
-    const signedTransaction = await signer.signTransaction(refundTransaction);
-    await signedTransaction.execute(hashconnect.getClient());
+    const frozenRefund = await refundTransaction.freezeWithSigner(signer);
+    const refundSubmit = await frozenRefund.executeWithSigner(signer);
+    console.log('refund info', refundSubmit);
+    updateJarStatus(jar, 'Failed');
   };
 
   const value = {
@@ -418,7 +482,7 @@ export function HederaProvider({ children }) {
     disconnect,
     createJar,
     generateAcceptanceLink,
-    checkJarExpiration,
+    updateJarStatus,
     refundDeposit,
     accountId,
     getPublicKeys,

@@ -11,7 +11,9 @@ export const DataProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('transfer');
   const { accountId } = useHedera();
+  const [jarId, setJarId] = useState(null);
   const [jarDetails, setJarDetails] = useState([]);
+  const [details, setDetails] = useState(true);
 
   const fetchData = async () => {
     if (!accountId) {
@@ -52,19 +54,30 @@ export const DataProvider = ({ children }) => {
   }, [accountId, activeTab]); // Dependency on both `accountId` and `activeTab`
 
   const fetchJarDetails = async () => {
+    if (!jarId) {
+      setDetails(false);
+      return; // Avoid unnecessary fetch if no accountId
+    }
     try {
-      setLoading(true);
+      setDetails(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/jar/jarDetails/${jarID}`
+        `${process.env.NEXT_PUBLIC_API_URL}/jar/jarDetails/${jarId}`
       );
       const data = await response.json();
       setJarDetails(data);
+      //console.log(data);
     } catch (error) {
       console.error('Error fetching jar details:', error);
     } finally {
-      setLoading(false); // Ensure loading state is reset
+      setDetails(false); // Ensure loading state is reset
     }
   };
+
+  useEffect(() => {
+    if (jarId) {
+      fetchJarDetails();
+    }
+  }, [jarId]);
 
   return (
     <DataContext.Provider
@@ -77,6 +90,10 @@ export const DataProvider = ({ children }) => {
         setActiveTab,
         fetchData,
         fetchJarDetails,
+        jarId,
+        setJarId,
+        setDetails,
+        details,
       }}
     >
       {children}

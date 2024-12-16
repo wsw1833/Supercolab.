@@ -19,7 +19,7 @@ function TabsComponent() {
   const { activeTab, setActiveTab } = useDataContext();
 
   return (
-    <div className="w-full flex items-start max-h-[10rem]">
+    <div className="w-full flex items-start max-h-auto h-[8rem]">
       <div className="flex-1"></div>
       <Tabs
         defaultValue="transfer"

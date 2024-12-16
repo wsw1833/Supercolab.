@@ -4,6 +4,8 @@ import { useEffect, useState, memo } from 'react';
 import { useParams } from 'next/navigation';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { useDataContext } from '@/contexts/dataContext';
+import { useHedera } from '@/contexts/HederaContext';
 
 const statuscode = [
   { status: 'Success', color: 'bg-green' },
@@ -19,28 +21,34 @@ const role = [
   { role: 'Approver', color: 'bg-none' },
 ];
 
-const Info = ({ jarData }) => {
+const Info = () => {
   const [status, setStatus] = useState('');
   const [userRole, setUserRole] = useState('Creator');
-  const [loading, setLoading] = useState(true);
+  const { jarDetails, loading, error } = useDataContext();
+  const { accountId, refundDeposit } = useHedera();
+  let currentRole;
+  let formattedDate;
 
-  // Simulate data fetching, for example:
-  useEffect(() => {
-    if (jarData) {
-      setStatus(jarData.status); // Set status from the fetched data
-      setLoading(false); // Set loading to false once data is fetched
-    }
-  }, [jarData]);
-
-  if (loading) {
+  if (loading && !jarDetails) {
     return <div>Loading...</div>; // Optionally show a loading state
   }
 
-  const currentStatus = statuscode.find((s) => s.status === status);
-  const currentRole = role.find((r) => r.role === userRole);
-  const formattedDate = new Date(jarData.createdAt).toLocaleDateString('en-GB');
+  useEffect(() => {
+    if (jarDetails?.creator === accountId) {
+      setUserRole('Creator');
+    } else {
+      setUserRole('Approver');
+    }
+    setStatus(jarDetails.status);
+  }, [jarDetails, accountId]);
 
-  console.log('info jardata', jarData);
+  const currentStatus = statuscode.find((s) => s.status === status);
+  currentRole = role.find((r) => r.role === userRole);
+  formattedDate = new Date(jarDetails.createdAt).toLocaleDateString('en-GB');
+
+  const handleButton = async () => {
+    refundDeposit(jarDetails);
+  };
 
   return (
     <div className="w-[81rem] grid grid-cols-12 items-start justify-start">
@@ -48,7 +56,7 @@ const Info = ({ jarData }) => {
         Jar Transfer
       </span>
       <span className="col-span-10 text-[28px] my-2 text-p1 font-inter font-bold">
-        #{jarData.jarId}
+        #{jarDetails.jarId}
       </span>
       <span
         className={`col-span-2 mx-9 text-[24px] flex items-center justify-center align-middle font-bold text-white text-center ${currentStatus?.color} font-inter rounded-[10px] h-[2.8rem]`}
@@ -63,10 +71,11 @@ const Info = ({ jarData }) => {
         Project
       </span>
       <span className="col-span-3 flex mt-2 pl-8 w-[400px] border-p2 border-2 -mx-4 rounded-[10px] h-[3rem] font-inter font-medium text-[16px] text-left items-center">
-        {jarData.projectName}
+        {jarDetails.projectName}
       </span>
-      {userRole !== 'Approver' && (
+      {userRole !== 'Approver' && status !== 'Success' && (
         <Button
+          onClick={handleButton}
           className={`col-start-11 col-span-2 mx-10 text-[20px] flex items-center justify-center align-middle text-white text-center ${currentRole?.color} font-inter rounded-[10px] h-[2.5rem]`}
         >
           {currentRole?.action}
@@ -76,23 +85,23 @@ const Info = ({ jarData }) => {
         Creator
       </span>
       <span className="col-span-3 flex mt-2 pl-8 w-[400px] border-p2 border-2 -mx-4 rounded-[10px] h-[3rem] font-inter font-medium text-[16px] text-left items-center">
-        {jarData.creator}
+        {jarDetails.creator}
       </span>
       <span className="col-start-1 flex mt-2 bg-p2 rounded-[10px] h-[3rem] font-inter font-medium text-[16px] items-center justify-center align-middle">
         Recipient
       </span>
       <span className="col-span-3 flex mt-2 pl-8 w-[400px] border-p2 border-2 -mx-4 rounded-[10px] h-[3rem] font-inter font-medium text-[16px] text-left items-center">
-        {jarData.recipient}
+        {jarDetails.recipient}
       </span>
       <span className="col-start-1 w-[140px] flex mt-2 bg-p2 rounded-[10px] h-[3rem] font-inter font-medium text-[16px] items-center justify-center align-middle">
         Asset Amount
       </span>
       <span className="col-span-3 flex mt-2 pl-12 w-[384px] border-p2 border-2 rounded-[10px] h-[3rem] font-inter font-semibold text-[16px] text-p1 text-left items-center justify-between">
-        {jarData.amount} {jarData.tokenType}
+        {jarDetails.amount} {jarDetails.tokenType}
         <img src="/hederaScan.png" alt="scan" className="h-8 w-8 mr-4" />
       </span>
       <a
-        href="https://hashscan.io/mainnet/dashboard"
+        href={`https://testnet.mirrornode.hedera.com/api/v1/schedules/${jarDetails.scheduleId}`}
         target="_blank"
         className="col-span-3 flex mt-2 ml-20 h-[3rem] font-inter font-medium text-[14px] text-[#4747C7] underline underline-offset-2 text-right items-center"
       >
@@ -104,7 +113,7 @@ const Info = ({ jarData }) => {
       <Textarea
         className="col-start-1 mt-2 w-[40rem] h-[12rem] text-b1"
         placeholder="Type your message here."
-        value={jarData.description}
+        value={jarDetails.description}
         disabled
       />
     </div>
