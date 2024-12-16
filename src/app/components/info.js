@@ -40,13 +40,15 @@ const Info = ({ jarData }) => {
   const currentRole = role.find((r) => r.role === userRole);
   const formattedDate = new Date(jarData.createdAt).toLocaleDateString('en-GB');
 
+  console.log('info jardata', jarData);
+
   return (
     <div className="w-[81rem] grid grid-cols-12 items-start justify-start">
       <span className="col-span-12 text-[20px] text-p1 font-inter font-medium">
         Jar Transfer
       </span>
       <span className="col-span-10 text-[28px] my-2 text-p1 font-inter font-bold">
-        #{jarData.id}
+        #{jarData.jarId}
       </span>
       <span
         className={`col-span-2 mx-9 text-[24px] flex items-center justify-center align-middle font-bold text-white text-center ${currentStatus?.color} font-inter rounded-[10px] h-[2.8rem]`}

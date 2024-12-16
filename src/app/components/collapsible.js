@@ -22,6 +22,7 @@ const collapsible = ({ jarData }) => {
   const [isOpen, setIsOpen] = useState(true);
 
   useEffect(() => {
+    console.log('collpase', jarData);
     if (accountId && jarData) {
       const approver = jarData.approvers.includes(accountId);
       const hasSigned = jarData.approvals.includes(accountId);

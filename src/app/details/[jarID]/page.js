@@ -8,17 +8,21 @@ import { useParams } from 'next/navigation';
 
 const JarDetails = () => {
   const params = useParams();
-  const [jarData, setJarData] = useState(null);
+  const [jarData, setJarData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const jarID = params.jarID;
     if (jarID) {
       const fetchJarData = async () => {
         try {
-          const response = await fetch(`/api/jars/:${jarID}`);
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/jar/jarDetails/${jarID}`
+          );
           if (response.ok) {
             const data = await response.json();
-            setJarData(data.data[0]);
+            console.log('jar details', data);
+            setJarData(data);
           } else {
             console.error('Failed to fetch jar data.');
           }
@@ -30,14 +34,18 @@ const JarDetails = () => {
     }
   }, [params]);
 
-  return !jarData ? (
-    <div className="flex items-center justify-center min-h-screen">
-      <p className="text-lg font-semibold">Loading...</p>
-    </div>
-  ) : (
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-lg font-semibold">Loading...</p>
+      </div>
+    );
+  }
+
+  return (
     <div className="ml-64 mt-10 min-h-auto max-h-[50rem]">
       <div className="grid grid-cols-12 items-start justify-start ml-16">
-        <Info jarData={jarData} />
+        {jarData && <Info jarData={jarData} />}
         <span className="col-start-1 flex mt-6 font-inter font-medium text-[16px]">
           Documents
         </span>
@@ -52,9 +60,11 @@ const JarDetails = () => {
         <div className="col-start-1 col-span-3 mt-2">
           <Upload />
         </div>
-        <div className="grid grid-col-12 col-start-1 col-end-4 mt-[12rem]">
-          <CollapsibleApproval jarData={jarData} />
-        </div>
+        {jarData && (
+          <div className="grid grid-col-12 col-start-1 col-end-4 mt-[12rem]">
+            <CollapsibleApproval jarData={jarData} />
+          </div>
+        )}
       </div>
       <div className="flex-1"></div>
     </div>

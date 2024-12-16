@@ -66,7 +66,6 @@ const create = () => {
         window.location.href = `/success?jarID=${result.jarId}`;
       }
     } catch (error) {
-      // toast.error(error.message);
       console.log(error);
     }
   };

@@ -8,8 +8,7 @@ import {
 } from '@/components/ui/table';
 
 import PopDetails from './popDetails';
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useDataContext } from '@/contexts/dataContext';
 
 const statuscode = [
   {
@@ -35,26 +34,7 @@ const statuscode = [
 ];
 
 export default function DataTable() {
-  const [data, setData] = useState([]); // State to store fetched data
-  const [loading, setLoading] = useState(true); // State to manage loading
-
-  // Function to fetch data from API
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('/api/jars'); // Adjust endpoint if needed
-        const result = await response.json();
-        console.log(result.data);
-        setData(result.data); // Set fetched data to state
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false); // Disable loading spinner
-      }
-    };
-
-    fetchData();
-  }, []);
+  const { data, loading, error } = useDataContext();
 
   const getStatusColor = (status) => {
     const statusEntry = statuscode.find((entry) => entry.status === status);
@@ -87,9 +67,9 @@ export default function DataTable() {
         </TableHeader>
         <TableBody>
           {data.map((data) => (
-            <TableRow key={data}>
+            <TableRow key={data.jarId}>
               <TableCell className="px-4 py-6 text-[18px] text-b1 text-inter font-medium">
-                #{data.id}
+                #{data.jarId}
               </TableCell>
               <TableCell className="px-10 py-4 text-[18px] text-b1 text-inter font-medium">
                 {data.creator}
@@ -110,7 +90,7 @@ export default function DataTable() {
                 </span>
               </TableCell>
               <TableCell className="py-4 text-[18px] text-center text-b1 text-inter font-medium ">
-                <PopDetails jarID={data.id} />
+                <PopDetails jarID={data.jarId} />
               </TableCell>
             </TableRow>
           ))}

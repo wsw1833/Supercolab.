@@ -5,12 +5,26 @@ import Picker from './components/datepicker';
 import DataTable from './components/dataTable';
 import { Input } from '@/components/ui/input';
 import Paging from './components/pagination';
+import { DataProvider, useDataContext } from '../contexts/dataContext';
+
 export default function Dashboard() {
+  return (
+    <DataProvider>
+      <TabsComponent />
+    </DataProvider>
+  );
+}
+
+function TabsComponent() {
+  const { activeTab, setActiveTab } = useDataContext();
+
   return (
     <div className="w-full flex items-start max-h-[10rem]">
       <div className="flex-1"></div>
       <Tabs
         defaultValue="transfer"
+        value={activeTab}
+        onValueChange={setActiveTab}
         className="w-[22rem] mt-10 flex flex-col items-center justify-center"
       >
         <TabsList className="grid w-full h-fit grid-cols-2">

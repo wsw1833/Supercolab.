@@ -39,7 +39,7 @@ const success = () => {
         className="w-[38rem] mt-6 h-[3rem] rounded-[12px] bg-p1 hover:bg-p3 flex flex-row justify-center "
       >
         <span className="flex items-center justify-center text-white font-inter font-medium text-[20px] h-[3rem]">
-          {link}
+          {jarId}
         </span>
       </Button>
       <span className="flex mt-2 text-center font-inter font-semibold text-b3 text-[13px]">

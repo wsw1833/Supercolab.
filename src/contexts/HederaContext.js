@@ -246,7 +246,7 @@ export function HederaProvider({ children }) {
     const acceptLink = generateAcceptanceLink(jarId);
 
     const jarData = {
-      id: jarId,
+      jarId,
       multiSig,
       scheduleId,
       scheduledTxId,
@@ -258,7 +258,7 @@ export function HederaProvider({ children }) {
       creator: accountId.toString(),
       recipient,
       approvers,
-      status: 'PENDING',
+      status: 'Pending',
       URILink: acceptLink,
       threshold,
       approvals: [accountId.toString(), Date.now()],
@@ -266,13 +266,16 @@ export function HederaProvider({ children }) {
       expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
     };
 
-    const response = await fetch('/api/jars', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(jarData),
-    });
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/jar/createJar`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(jarData),
+      }
+    );
 
     if (!response.ok) {
       throw new Error('Failed to store jar data in MongoDB');
@@ -331,9 +334,9 @@ export function HederaProvider({ children }) {
         updateJarApproval(jarData.id, stringId);
       }
 
-      const query = await new ScheduleInfoQuery().setScheduleId(scheduleId);
+      // const query = await new ScheduleInfoQuery().setScheduleId(scheduleId);
 
-      console.log('queryInfo', query);
+      // console.log('queryInfo', query);
 
       const URL = `https://testnet.mirrornode.hedera.com/api/v1/schedules/${scheduleId}`;
       const request = await fetch(URL);
@@ -354,22 +357,22 @@ export function HederaProvider({ children }) {
 
   const updateJarApproval = async (jarId, addressId) => {
     try {
-      let jar = JSON.parse(localStorage.getItem(`jar-${jarId}`));
+      // Construct the data to be sent to the backend
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/jar/jarApprovals/${jarId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ addressId }), // Sending only the addressId
+        }
+      );
 
-      if (!jar) {
-        console.error('Jar data not found in localStorage');
-        return;
+      if (!response.ok) {
+        throw new Error('Failed to update approval');
       }
-
-      const Timestamp = date.now();
-
-      jar.approvals.push([addressId, Timestamp]);
-
-      // Save the updated jar back to localStorage
-      localStorage.setItem(`jar-${jarId}`, JSON.stringify(jar));
-
-      console.log('Jar updated:', jar);
-      return jar.approvals.length;
+      console.log('jar approvals updated successfully');
     } catch (error) {
       console.error('Error updating approval:', error);
     }
