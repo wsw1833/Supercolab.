@@ -73,14 +73,15 @@ const Info = () => {
       <span className="col-span-3 flex mt-2 pl-8 w-[400px] border-p2 border-2 -mx-4 rounded-[10px] h-[3rem] font-inter font-medium text-[16px] text-left items-center">
         {jarDetails.projectName}
       </span>
-      {userRole !== 'Approver' && status !== 'Success' && (
-        <Button
-          onClick={handleButton}
-          className={`col-start-11 col-span-2 mx-10 text-[20px] flex items-center justify-center align-middle text-white text-center ${currentRole?.color} font-inter rounded-[10px] h-[2.5rem]`}
-        >
-          {currentRole?.action}
-        </Button>
-      )}
+      {userRole !== 'Approver' &&
+        !(status === 'Success' || status === 'Failed') && (
+          <Button
+            onClick={handleButton}
+            className={`col-start-11 col-span-2 mx-10 text-[20px] flex items-center justify-center align-middle text-white text-center ${currentRole?.color} font-inter rounded-[10px] h-[2.5rem]`}
+          >
+            {currentRole?.action}
+          </Button>
+        )}
       <span className="col-start-1 flex mt-2 bg-p2 rounded-[10px] h-[3rem] font-inter font-medium text-[16px] items-center justify-center align-middle">
         Creator
       </span>

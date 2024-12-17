@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button.jsx';
 import { useHedera } from '@/contexts/HederaContext.js';
+import { DataProvider, useDataContext } from '@/contexts/dataContext.js';
 
 const items = [
   {
@@ -23,19 +24,28 @@ const items = [
     icon: dashboard,
   },
   {
-    title: 'Create Jar',
+    title: 'Create',
     path: '/create',
     icon: addUser,
   },
   {
-    title: 'Members List',
+    title: 'Members',
     path: '/member',
     icon: sign,
   },
 ];
 
-export default function sidebar({ page }) {
+export default function sidebar() {
+  return (
+    <DataProvider>
+      <SidebarComponent />
+    </DataProvider>
+  );
+}
+
+function SidebarComponent() {
   const { accountId } = useHedera();
+  const { setIsCreate } = useDataContext();
   const [isActive, setIsActive] = useState(
     sessionStorage.getItem('menu') || 'Dashboard'
   );
@@ -43,6 +53,9 @@ export default function sidebar({ page }) {
   const handleMenuClick = (menu) => {
     sessionStorage.setItem('menu', menu);
     setIsActive(menu); // Update active menu on click
+    if (menu === 'Members' || menu === 'Create') {
+      setIsCreate(true);
+    }
   };
 
   const copyToClipboard = async () => {

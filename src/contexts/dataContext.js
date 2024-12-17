@@ -14,6 +14,9 @@ export const DataProvider = ({ children }) => {
   const [jarId, setJarId] = useState(null);
   const [jarDetails, setJarDetails] = useState([]);
   const [details, setDetails] = useState(true);
+  const [isCreate, setIsCreate] = useState(false);
+  const [member, setMember] = useState([]);
+  const [memberLoading, setMemberLoading] = useState(true);
 
   const fetchData = async () => {
     if (!accountId) {
@@ -78,12 +81,90 @@ export const DataProvider = ({ children }) => {
       fetchJarDetails();
     }
   }, [jarId]);
+  const fetchMemberDetails = async () => {
+    if (!accountId) {
+      setMember([]);
+      setMemberLoading(false);
+      return;
+    }
+    try {
+      setMemberLoading(true);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/member/getMember/${accountId}`
+      );
+      if (response.status == 204) {
+        setMember([]);
+        return;
+      }
+      const data = await response.json();
+      setMember(data);
+    } catch (error) {
+      console.error('Error fetching jar details:', error);
+    } finally {
+      setLoading(false);
+      setIsCreate(false);
+    }
+  };
+  useEffect(() => {
+    fetchMemberDetails();
+  }, [isCreate, accountId]);
+
+  const removeMember = async ({ walletId }) => {
+    if (!accountId) {
+      return;
+    }
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/member/removeMember`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ accountId, walletId }),
+        }
+      );
+      const data = await response.json();
+      console.log(data);
+    } catch (error) {
+      console.error('Error fetching jar details:', error);
+    } finally {
+      fetchMemberDetails();
+    }
+  };
+
+  const updateRole = async ({ role, walletId }) => {
+    if (!accountId) {
+      return;
+    }
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/member/changeRole`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ accountId, walletId, role }),
+        }
+      );
+      const data = await response.json();
+      console.log(data);
+    } catch (error) {
+      console.error('Error fetching jar details:', error);
+    } finally {
+      fetchMemberDetails();
+    }
+  };
 
   return (
     <DataContext.Provider
       value={{
         data,
         jarDetails,
+        memberLoading,
+        member,
+        setIsCreate,
         loading,
         error,
         activeTab,
@@ -94,6 +175,10 @@ export const DataProvider = ({ children }) => {
         setJarId,
         setDetails,
         details,
+        fetchMemberDetails,
+        setMember,
+        removeMember,
+        updateRole,
       }}
     >
       {children}

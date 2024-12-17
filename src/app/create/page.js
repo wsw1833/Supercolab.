@@ -18,6 +18,7 @@ import { useState, useEffect } from 'react';
 import React from 'react';
 import { Form } from '@/components/ui/form';
 import { useHedera } from '@/contexts/HederaContext';
+import { DataProvider, useDataContext } from '@/contexts/dataContext';
 
 const tokens = [
   { value: 'HBAR', label: 'HBAR', icon: hbar },
@@ -25,16 +26,15 @@ const tokens = [
   { value: 'WETH', label: 'WETH', icon: weth },
 ];
 
-const names = [
-  { name: '0.0.2455566' },
-  { name: '0.0.5254354' },
-  { name: '0.0.5214424' },
-  { name: '0.0.5246690' },
-];
+export default function Create() {
+  return (
+    <DataProvider>
+      <CreateComponent />
+    </DataProvider>
+  );
+}
 
-const create = () => {
-  const { pairingData, createJar } = useHedera();
-
+function CreateComponent() {
   const [formData, setFormData] = useState({
     projectName: '',
     description: '',
@@ -43,6 +43,13 @@ const create = () => {
     recipient: '',
     approvers: [],
   });
+
+  const { pairingData, createJar } = useHedera();
+  const { member, memberLoading, setIsCreate } = useDataContext();
+
+  if (memberLoading && !member) {
+    return <div>Loading...</div>;
+  }
 
   const [selectedToken, setSelectedToken] = useState(null);
   const [selectedApprovers, setSelectedApprovers] = useState([]);
@@ -81,8 +88,8 @@ const create = () => {
   };
 
   const handleApprovers = (value) => {
-    if (!selectedApprovers.some((approve) => approve.name === value)) {
-      const newApprovers = names.find((approve) => approve.name === value);
+    if (!selectedApprovers.some((approve) => approve.walletId === value)) {
+      const newApprovers = member.find((approve) => approve.walletId === value);
       setSelectedApprovers([...selectedApprovers, newApprovers]);
     }
     if (!formData.approvers.includes(value)) {
@@ -95,7 +102,7 @@ const create = () => {
 
   const removeApprovers = (value) => {
     setSelectedApprovers(
-      selectedApprovers.filter((approve) => approve.name !== value)
+      selectedApprovers.filter((approve) => approve.walletId !== value)
     );
     setFormData((prev) => ({
       ...prev,
@@ -208,9 +215,9 @@ const create = () => {
               <SelectValue placeholder="Select Recipient" />
             </SelectTrigger>
             <SelectContent>
-              {names.map((n) => (
-                <SelectItem key={n.name} value={n.name}>
-                  {n.name}
+              {member.map((mem) => (
+                <SelectItem key={mem.nickName} value={mem.walletId}>
+                  {mem.nickName}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -236,18 +243,18 @@ const create = () => {
             <SelectContent>
               <SelectGroup>
                 <SelectLabel>Approvers</SelectLabel>
-                {names.map((n) => (
+                {member.map((mem) => (
                   <SelectItem
-                    key={n.name}
-                    value={n.name}
+                    key={mem.nickName}
+                    value={mem.walletId}
                     disabled={selectedApprovers.some(
-                      (approve) => approve.name === n.name
+                      (approve) => approve.walletId === mem.walletId
                     )}
                   >
                     <div className="flex items-center justify-between w-full">
-                      {n.name}
+                      {mem.nickName}
                       {selectedApprovers.some(
-                        (approve) => approve.name === n.name
+                        (approve) => approve.walletId === mem.walletId
                       ) && <Check className="h-4 w-4 text-green-500" />}
                     </div>
                   </SelectItem>
@@ -264,15 +271,15 @@ const create = () => {
               <ul className="space-y-2">
                 {selectedApprovers.map((approve) => (
                   <li
-                    key={approve.name}
+                    key={approve.walletId}
                     className="flex items-center justify-between bg-p2 rounded-md p-2"
                   >
-                    {approve.name}
+                    {approve.nickName}
                     <Button
                       variant="ghost"
                       size="sm"
                       className="hover:bg-white active:bg-p2"
-                      onClick={() => removeApprovers(approve.name)}
+                      onClick={() => removeApprovers(approve.walletId)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -295,6 +302,4 @@ const create = () => {
       </div>
     </div>
   );
-};
-
-export default create;
+}

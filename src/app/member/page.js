@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
@@ -20,35 +22,70 @@ import {
 
 import PopMembers from '../components/popMembers';
 import Paging from '../components/pagination';
+import { useHedera } from '@/contexts/HederaContext';
+import { DataProvider, useDataContext } from '../../contexts/dataContext';
 
-const members = [
-  {
-    name: 'Wong Donkey',
-    address: '0.0.1234567',
-    role: 'Approver',
-    sign: true,
-  },
-  {
-    name: 'Alex Donkey',
-    address: '0.0.1234567',
-    role: 'Approver',
-    sign: true,
-  },
-  {
-    name: 'Zhang Donkey',
-    address: '0.0.1234567',
-    role: 'Recipient',
-    sign: false,
-  },
-  {
-    name: 'Donkey Kong',
-    address: '0.0.1234567',
-    role: 'Recipient',
-    sign: false,
-  },
-];
+export default function MemberPage() {
+  return (
+    <DataProvider>
+      <MemberComponent />
+    </DataProvider>
+  );
+}
 
-const memberPage = () => {
+function MemberComponent() {
+  const [formMember, setFormMember] = useState({
+    walletId: '',
+    nickName: '',
+    role: 'Recipient',
+  });
+  const { accountId, pairingData } = useHedera();
+  const { member, memberLoading, setIsCreate } = useDataContext();
+
+  if (memberLoading && !member) {
+    return <div>Loading...</div>;
+  }
+
+  const createHandle = async (e) => {
+    e.preventDefault();
+    console.log('.....');
+
+    if (!pairingData) {
+      console.log('Please connect your wallet first');
+      return;
+    }
+
+    try {
+      console.log(formMember);
+      const requestBody = { formMember: formMember, creator: accountId };
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/member/createMember`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to store member data in MongoDB');
+      }
+
+      if (response.status == 201) {
+        setIsCreate(true);
+        setFormMember({
+          walletId: '',
+          nickName: '',
+          role: 'Recipient',
+        });
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <div className="ml-64 mt-10 h-[20rem] max-h-auto">
       <div className="grid grid-cols-11 items-center justify-center ml-14">
@@ -67,6 +104,13 @@ const memberPage = () => {
             Wallet Address
           </Label>
           <Input
+            value={formMember.walletId}
+            onChange={(e) =>
+              setFormMember((prev) => ({
+                ...prev,
+                walletId: e.target.value,
+              }))
+            }
             type="text"
             id="wallet"
             placeholder="Example: 0.0.1234567"
@@ -81,6 +125,13 @@ const memberPage = () => {
             NickNames
           </Label>
           <Input
+            value={formMember.nickName}
+            onChange={(e) =>
+              setFormMember((prev) => ({
+                ...prev,
+                nickName: e.target.value,
+              }))
+            }
             type="text"
             id="names"
             placeholder="Example: Donkey Kong"
@@ -94,17 +145,28 @@ const memberPage = () => {
           >
             Roles
           </Label>
-          <Select>
+          <Select
+            value={formMember.role}
+            onValueChange={(value) =>
+              setFormMember((prev) => ({
+                ...prev,
+                role: value,
+              }))
+            }
+          >
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Recipient" />
             </SelectTrigger>
             <SelectContent className="text-[18px] font-inter ">
-              <SelectItem value="recipient">Recipient</SelectItem>
-              <SelectItem value="approver">Approver</SelectItem>
+              <SelectItem value="Recipient">Recipient</SelectItem>
+              <SelectItem value="Approver">Approver</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <Button className="col-span-2 mt-7 bg-p1 flex text-center w-[8rem] border border-p1 hover:bg-white hover:text-p1 font-inter font-semibold text-[16px] text-white">
+        <Button
+          onClick={createHandle}
+          className="col-span-2 mt-7 bg-p1 flex text-center w-[8rem] border border-p1 hover:bg-white hover:text-p1 font-inter font-semibold text-[16px] text-white"
+        >
           Add Members
         </Button>
         <span className="col-span-11 mt-8 text-[22px] font-inter  text-b1 ">
@@ -133,26 +195,26 @@ const memberPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {members.map((member) => (
+              {member.map((mem, index) => (
                 <TableRow
-                  key={member.name}
+                  key={index}
                   className="flex px-4 justify-between items-center flex-row text-center align-middle"
                 >
                   <TableCell className="py-6 text-[18px] text-b1 text-inter font-medium text-center">
                     <img src="/user.svg" />
                   </TableCell>
                   <TableCell className="py-4 text-[18px] text-b1 text-inter font-medium text-center">
-                    {member.name}
+                    {mem.nickName}
                   </TableCell>
                   <TableCell className="py-4 text-[18px] text-b1 text-inter font-medium">
-                    {member.address}
+                    {mem.walletId}
                   </TableCell>
                   <TableCell className="py-4 text-[18px] text-b1 text-inter font-medium">
-                    {member.role}
+                    {mem.role}
                   </TableCell>
                   <TableCell className="py-4 text-[18px] text-center text-b1 text-inter font-medium ">
                     {}
-                    <PopMembers role={member.sign} />
+                    <PopMembers role={mem.role} walletId={mem.walletId} />
                   </TableCell>
                 </TableRow>
               ))}
@@ -165,6 +227,4 @@ const memberPage = () => {
       </div>
     </div>
   );
-};
-
-export default memberPage;
+}
