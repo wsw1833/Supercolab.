@@ -1,4 +1,4 @@
-### SuperColab - Revolutionizing Collaborative Financial Management with Telegram on Hedera
+### SuperColab - Revolutionizing Collaborative Financial Management on Hedera
 
 ## Introducing SuperColab.
 
