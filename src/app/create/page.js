@@ -45,7 +45,7 @@ function CreateComponent() {
   });
 
   const { pairingData, createJar } = useHedera();
-  const { member, memberLoading, setIsCreate } = useDataContext();
+  const { member, memberLoading } = useDataContext();
 
   if (memberLoading && !member) {
     return <div>Loading...</div>;

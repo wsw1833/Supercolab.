@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload } from 'lucide-react';
 
 export default function InputFile() {
   const fileInputRef = useRef(null);

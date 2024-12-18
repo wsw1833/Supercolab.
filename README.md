@@ -1,4 +1,6 @@
-### SuperColab - Revolutionizing Collaborative Financial Management with Telegram on Hedera
+### SuperColab - Revolutionizing Collaborative Financial Management on Hedera
+
+### Test Here: SuperColab.
 
 ## Introducing SuperColab.
 
@@ -17,13 +19,15 @@ Traditionally, organizations often struggle with fragmented communication and ma
 1. **Streamlined Financial Transactions:**
    - SuperColab simplifies the creation and management of multi-signature transactions. With an intuitive web interface and integration with the **HashPack** wallet, users of all technical levels can seamlessly onboard into SuperColab, create Jars, and manage approvals without complications.
 2. **Transparency and Security with Hedera:**
-   - By leveraging **Hedera’s Consensus Service (HCS) and File Service (HFS)**, every transaction is securely attested and immutably recorded. This ensures transparency and builds trust among collaborators, knowing all actions are verifiable.
+   - By leveraging **Hedera’s Consensus Service (HCS)**, every transaction is securely attested and immutably recorded. This ensures transparency and builds trust among collaborators, knowing all actions are verifiable.
 3. **Effortless Collaboration through Smart Links:**
    - SuperColab generates unique, shareable links for every Jar transaction, simplifying communication and collaboration. While Telegram integration is on the horizon, manually sharing links is quick and intuitive, keeping your team aligned and moving forward.
 4. **Flexible and Accountable Approval Processes:**
    - SuperColab provides control and flexibility, allowing you to assign approvers and maintain ownership. Only the Jar creator can terminate or modify transactions, ensuring accountability and clear roles.
 5. **File Upload and Attestation for Purpose-Driven Transactions:**
    - SuperColab allows user to attach relevant files or documents to transactions, clearly defining their purpose and keeping stakeholders aligned. With Consensus Service from Hedera perform and act as attestation, all actions are securely verified and purpose-driven.
+6. **Simplified Member Management for Secure Payouts:**
+   - SuperColab streamlines payout operations with an intuitive member management system. Easily store and manage recipients and approvers, complete with customizable nicknames for quick identification. Assign specific roles and permissions to ensure that the right people handle each stage of the payout process. With clear role definitions and secure access control, payouts are organized, efficient, and fully compliant with SuperColab.
 
 **In summary, traditional financial decision-making methods can often be fragmented, inefficient, and prone to errors.** SuperColab revolutionizes the way teams collaborate by integrating cutting-edge technology with seamless workflows. It simplifies multi-signature transactions, enhances transparency with Hedera’s secure infrastructure, and fosters real-time collaboration with smart links. By streamlining approval processes and file uploads, SuperColab helps teams make faster, more informed decisions, transforming the way financial collaboration works.
 

@@ -64,7 +64,7 @@ const collapsible = () => {
   const handleApprove = async () => {
     const response = await signScheduledTransfer(jarDetails);
     if (response) {
-      //update component using toast.
+      console.log('success', response);
     }
   };
 
