@@ -1,6 +1,9 @@
 ### SuperColab - Revolutionizing Collaborative Financial Management on Hedera
+<<<<<<< HEAD
 
 ### Test Here: SuperColab.
+=======
+>>>>>>> 005288cc64fedd56ea144f6baa9a10f1fd17a0fb
 
 ## Introducing SuperColab.
 

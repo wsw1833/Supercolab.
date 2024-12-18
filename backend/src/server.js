@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const jarRoutes = require('./routes/jarRoutes');
+const memberRoutes = require('./routes/memberRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -26,6 +27,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/jar', jarRoutes);
+app.use('/member', memberRoutes);
 
 // MongoDB Connection
 mongoose
