@@ -12,7 +12,7 @@ import { useHedera } from '@/contexts/HederaContext';
 import { useDataContext } from '@/contexts/dataContext';
 import { format } from 'date-fns';
 
-const collapsible = () => {
+const Collapsible = () => {
   const formatTimestamp = (timestamp) => {
     const options = {
       day: '2-digit',
@@ -129,4 +129,4 @@ const collapsible = () => {
   );
 };
 
-export default collapsible;
+export default Collapsible;

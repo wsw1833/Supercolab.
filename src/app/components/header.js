@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import React from 'react';
 import Link from 'next/link';
 import { useHedera } from '@/contexts/HederaContext';
-export default function header() {
+export default function Header() {
   const { connect } = useHedera();
 
   return (

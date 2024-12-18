@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useDataContext } from '@/contexts/dataContext';
@@ -22,12 +21,12 @@ const role = [
 ];
 
 const Info = () => {
-  const [status, setStatus] = useState('');
-  const [userRole, setUserRole] = useState('Creator');
-  const { jarDetails, loading, error } = useDataContext();
-  const { accountId, refundDeposit } = useHedera();
   let currentRole;
   let formattedDate;
+  const { jarDetails, loading, error } = useDataContext();
+  const { accountId, refundDeposit } = useHedera();
+  const [status, setStatus] = useState('');
+  const [userRole, setUserRole] = useState('Creator');
 
   if (loading && !jarDetails) {
     return <div>Loading...</div>; // Optionally show a loading state

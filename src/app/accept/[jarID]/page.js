@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import AcceptCard from '../../components/card';
 import { Button } from '@/components/ui/button';
 
-const acceptPage = () => {
+const AcceptPage = () => {
   const [visible, setVisible] = useState(true);
 
   const validateUser = (user) => {
@@ -26,4 +26,4 @@ const acceptPage = () => {
   );
 };
 
-export default acceptPage;
+export default AcceptPage;
