@@ -1,6 +1,6 @@
-### SuperColab - Revolutionizing Collaborative Financial Management  on Hedera
-
 ![supercolab-logo](https://github.com/user-attachments/assets/ba721715-5052-4932-9587-56295164a881)
+
+### SuperColab - Revolutionizing Collaborative Financial Management  on Hedera
 
 ## Introducing SuperColab.
 
